@@ -80,5 +80,6 @@ router.get('/me', protect, authController.getMe);
 router.put('/profile', protect, authController.updateProfile);
 router.put('/change-password', protect, validateAsync(changePasswordValidation), authController.changePassword);
 router.post('/logout', protect, authController.logout);
+router.post('/upload-avatar', protect, authController.uploadAvatarMiddleware, authController.uploadAvatar);
 
 module.exports = router;

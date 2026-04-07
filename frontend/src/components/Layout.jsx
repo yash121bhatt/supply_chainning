@@ -1,8 +1,9 @@
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import useAuthStore from '../context/AuthContext';
 import { authAPI } from '../services';
-import { LogOut, User, Menu, X, LayoutDashboard, Package, Truck, MapPin, Settings, ChevronLeft, Users, DollarSign, Shield, BarChart3 } from 'lucide-react';
+import { LogOut, User, Menu, X, LayoutDashboard, Package, Truck, MapPin, Users, DollarSign, Shield, BarChart3 } from 'lucide-react';
 import { useState } from 'react';
+import HeaderProfile from './HeaderProfile';
 
 const Layout = () => {
   const navigate = useNavigate();
@@ -89,9 +90,17 @@ const Layout = () => {
           {/* User Info */}
           <div className="p-4 border-b">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center">
-                <User className="text-primary-600" size={20} />
-              </div>
+              {user?.avatar ? (
+                <img
+                  src={`${import.meta.env.VITE_API_URL || '/api'}${user.avatar}`}
+                  alt={user?.name}
+                  className="w-10 h-10 rounded-full object-cover"
+                />
+              ) : (
+                <div className="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center">
+                  <User className="text-primary-600" size={18} />
+                </div>
+              )}
               <div>
                 <p className="font-medium text-gray-900">{user?.name}</p>
                 <p className="text-sm text-gray-500 capitalize">{user?.role}</p>
@@ -159,13 +168,7 @@ const Layout = () => {
             >
               <MapPin size={20} />
             </button>
-            <button
-              onClick={() => navigate(`/${user?.role}/profile`)}
-              className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg"
-              title="Settings"
-            >
-              <Settings size={20} />
-            </button>
+            <HeaderProfile />
           </div>
         </header>
 

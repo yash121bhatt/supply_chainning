@@ -3,6 +3,37 @@ const asyncHandler = require('../utils/asyncHandler');
 const AppError = require('../utils/errorHandler').AppError;
 const User = require('../models/User');
 const { USER_ROLES } = require('../config/constants');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+
+// Multer config for avatar upload
+const avatarStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const dir = path.join(__dirname, '../../uploads/avatars');
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    cb(null, dir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueName = `${req.user.id}-${Date.now()}${path.extname(file.originalname)}`;
+    cb(null, uniqueName);
+  }
+});
+
+const avatarUpload = multer({
+  storage: avatarStorage,
+  limits: { fileSize: 2 * 1024 * 1024 }, // 2MB
+  fileFilter: (req, file, cb) => {
+    const allowed = ['image/jpeg', 'image/png', 'image/jpg'];
+    if (allowed.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new AppError('Only JPG, JPEG, and PNG images are allowed', 400));
+    }
+  }
+});
+
+exports.uploadAvatarMiddleware = avatarUpload.single('avatar');
 
 // Generate OTP for verification
 const generateOTP = () => {
@@ -162,6 +193,30 @@ exports.updateProfile = asyncHandler(async (req, res, next) => {
   res.status(200).json({
     success: true,
     message: 'Profile updated successfully',
+    data: {
+      user: user.getPublicProfile()
+    }
+  });
+});
+
+// Upload avatar
+exports.uploadAvatar = asyncHandler(async (req, res, next) => {
+  if (!req.file) {
+    return next(new AppError('No image file provided', 400));
+  }
+
+  const user = await User.findById(req.user.id);
+  if (!user) {
+    return next(new AppError('User not found', 404));
+  }
+
+  const avatarUrl = `/uploads/avatars/${req.file.filename}`;
+  user.avatar = avatarUrl;
+  await user.save();
+
+  res.status(200).json({
+    success: true,
+    message: 'Avatar uploaded successfully',
     data: {
       user: user.getPublicProfile()
     }

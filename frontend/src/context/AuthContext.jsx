@@ -22,6 +22,10 @@ const useAuthStore = create(
 
       updateUser: (userData) => set((state) => ({
         user: { ...state.user, ...userData }
+      })),
+
+      updateAvatar: (avatarUrl) => set((state) => ({
+        user: state.user ? { ...state.user, avatar: avatarUrl } : null
       }))
     }),
     {
