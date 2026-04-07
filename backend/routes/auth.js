@@ -68,12 +68,15 @@ const resetPasswordValidation = [
     .isLength({ min: 6 }).withMessage('New password must be at least 6 characters')
 ];
 
+const { otpLimiter } = require('../middleware/otpLimiter');
+
 // Public routes
 router.post('/register', validateAsync(registerValidation), authController.register);
 router.post('/login', validateAsync(loginValidation), authController.login);
 router.post('/forgot-password', validateAsync(forgotPasswordValidation), authController.forgotPassword);
 router.post('/reset-password', validateAsync(resetPasswordValidation), authController.resetPassword);
 router.post('/verify-email', authController.verifyEmail);
+router.post('/resend-otp', otpLimiter, authController.resendOTP);
 
 // Protected routes
 router.get('/me', protect, authController.getMe);

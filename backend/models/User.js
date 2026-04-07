@@ -41,6 +41,23 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  emailVerified: {
+    type: Boolean,
+    default: false
+  },
+  // Email verification OTP
+  emailOtp: {
+    type: String,
+    select: false
+  },
+  emailOtpExpiry: {
+    type: Date,
+    default: null
+  },
+  emailOtpAttempts: {
+    type: Number,
+    default: 0
+  },
   isActive: {
     type: Boolean,
     default: true
@@ -120,6 +137,9 @@ userSchema.methods.getPublicProfile = function() {
   delete user.password;
   delete user.resetPasswordToken;
   delete user.resetPasswordExpire;
+  delete user.emailOtp;
+  delete user.emailOtpExpiry;
+  delete user.emailOtpAttempts;
   return user;
 };
 

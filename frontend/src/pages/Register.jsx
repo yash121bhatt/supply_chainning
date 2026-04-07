@@ -43,14 +43,10 @@ const Register = () => {
 
       const response = await authAPI.register(payload);
       setAuth(response.data.user, response.data.token);
-      toast.success('Registration successful!');
+      toast.success('Registration successful! Please verify your email.');
 
-      const roleRoutes = {
-        shipper: '/shipper/dashboard',
-        carrier: '/carrier/dashboard',
-        driver: '/driver/dashboard'
-      };
-      navigate(roleRoutes[role]);
+      // Redirect to OTP verification page
+      navigate('/verify-email', { state: { email: formData.email } });
     } catch (error) {
       toast.error(error.message || 'Registration failed');
       setStep(1);

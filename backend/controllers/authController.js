@@ -1,8 +1,10 @@
+const crypto = require('crypto');
 const { generateToken } = require('../utils/jwt');
 const asyncHandler = require('../utils/asyncHandler');
 const AppError = require('../utils/errorHandler').AppError;
 const User = require('../models/User');
 const { USER_ROLES } = require('../config/constants');
+const { sendVerificationEmail } = require('../utils/email');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
@@ -40,11 +42,17 @@ const generateOTP = () => {
   return Math.floor(100000 + Math.random() * 900000).toString();
 };
 
-// Send verification email (placeholder - integrate with real email service)
-const sendVerificationEmail = async (email, otp) => {
-  // TODO: Implement email sending using Nodemailer
-  console.log(`[Email Service] Sending OTP ${otp} to ${email}`);
-  return true;
+// Hash OTP before storing
+const hashOTP = (otp) => crypto.createHash('sha256').update(otp).digest('hex');
+
+// Helper to generate and send OTP to user
+const triggerOTPEmail = async (user) => {
+  const otp = generateOTP();
+  user.emailOtp = hashOTP(otp);
+  user.emailOtpExpiry = Date.now() + 10 * 60 * 1000; // 10 minutes
+  user.emailOtpAttempts = 0;
+  await user.save();
+  await sendVerificationEmail(user.email, otp);
 };
 
 // Register new user
@@ -92,12 +100,15 @@ exports.register = asyncHandler(async (req, res, next) => {
 
   await user.save();
 
+  // Generate and send OTP for email verification
+  await triggerOTPEmail(user);
+
   // Generate JWT token
   const token = generateToken({ id: user._id, role: user.role });
 
   res.status(201).json({
     success: true,
-    message: 'User registered successfully',
+    message: 'User registered successfully. Please verify your email with the OTP sent to your email address.',
     data: {
       user: user.getPublicProfile(),
       token
@@ -129,6 +140,11 @@ exports.login = asyncHandler(async (req, res, next) => {
   const isPasswordValid = await user.comparePassword(password);
   if (!isPasswordValid) {
     return next(new AppError('Invalid email or password', 401));
+  }
+
+  // Check if email is verified
+  if (!user.emailVerified) {
+    return next(new AppError('Please verify your email address using OTP before logging in.', 403));
   }
 
   // Update last login
@@ -311,18 +327,81 @@ exports.resetPassword = asyncHandler(async (req, res, next) => {
   });
 });
 
-// Verify email with OTP
-exports.verifyEmail = asyncHandler(async (req, res, next) => {
-  const { email, otp } = req.body;
+// Resend OTP email
+exports.resendOTP = asyncHandler(async (req, res, next) => {
+  const { email } = req.body;
 
   const user = await User.findOne({ email });
   if (!user) {
     return next(new AppError('User not found', 404));
   }
 
-  // In production, implement proper OTP verification
-  // For MVP, we'll skip OTP validation
+  if (user.emailVerified) {
+    return next(new AppError('Email is already verified', 400));
+  }
+
+  // Rate limit check
+  if (user.emailOtpAttempts >= 5) {
+    return next(new AppError('Too many OTP resend attempts. Please try again later.', 429));
+  }
+
+  user.emailOtpAttempts += 1;
+  await user.save();
+
+  await triggerOTPEmail(user);
+
+  res.status(200).json({
+    success: true,
+    message: `A new OTP has been sent to your email. Attempt ${user.emailOtpAttempts}/5.`,
+    data: { attempts: user.emailOtpAttempts, maxAttempts: 5 }
+  });
+});
+
+// Verify email with OTP
+exports.verifyEmail = asyncHandler(async (req, res, next) => {
+  const { email, otp } = req.body;
+
+  if (!otp || !email) {
+    return next(new AppError('Please provide email and OTP', 400));
+  }
+
+  const user = await User.findOne({ email }).select('+emailOtp');
+  if (!user) {
+    return next(new AppError('User not found', 404));
+  }
+
+  if (user.emailVerified) {
+    return next(new AppError('Email is already verified', 400));
+  }
+
+  if (!user.emailOtp) {
+    return next(new AppError('No OTP sent. Please request a new OTP.', 400));
+  }
+
+  if (user.emailOtpExpiry && user.emailOtpExpiry < Date.now()) {
+    return next(new AppError('OTP has expired. Please request a new OTP.', 400));
+  }
+
+  // Compare hashed OTP
+  const hashedInput = hashOTP(otp);
+  if (hashedInput !== user.emailOtp) {
+    user.emailOtpAttempts = (user.emailOtpAttempts || 0) + 1;
+    if (user.emailOtpAttempts >= 5) {
+      user.emailOtp = undefined;
+      user.emailOtpExpiry = undefined;
+      await user.save();
+      return next(new AppError('Too many incorrect attempts. Please request a new OTP.', 400));
+    }
+    await user.save();
+    return next(new AppError(`Invalid OTP. ${5 - user.emailOtpAttempts} attempts remaining.`, 400));
+  }
+
+  // OTP is correct — mark email as verified
+  user.emailVerified = true;
   user.isVerified = true;
+  user.emailOtp = undefined;
+  user.emailOtpExpiry = undefined;
+  user.emailOtpAttempts = 0;
   await user.save();
 
   res.status(200).json({

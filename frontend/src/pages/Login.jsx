@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { authAPI } from '../services';
 import useAuthStore from '../context/AuthContext';
-import { Truck, LogIn } from 'lucide-react';
+import { Truck, LogIn, Mail } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const Login = () => {
@@ -32,7 +32,13 @@ const Login = () => {
       };
       navigate(roleRoutes[response.data.user.role] || '/shipper/dashboard');
     } catch (error) {
-      toast.error(error.message || 'Login failed');
+      if (error.status === 403 && error.message?.includes('verify your email')) {
+        // Redirect to email verification
+        toast.error('Email not verified. Please verify your OTP.', { duration: 5000 });
+        navigate('/verify-email', { state: { email: formData.email } });
+      } else {
+        toast.error(error.message || 'Login failed');
+      }
     } finally {
       setLoading(false);
     }
