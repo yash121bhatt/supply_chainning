@@ -17,6 +17,7 @@ const adminRoutes = require('./routes/admin');
 const paymentRoutes = require('./routes/payments');
 const notificationRoutes = require('./routes/notifications');
 const chatRoutes = require('./routes/chat');
+const directoryRoutes = require('./routes/directory');
 const errorHandler = require('./utils/errorHandler');
 
 // Initialize app
@@ -71,6 +72,7 @@ app.use('/api/bids', bidRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/chat', chatRoutes);
+app.use('/api/directory', directoryRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

@@ -131,4 +131,12 @@ export const adminUserAPI = {
   deleteUser: (id) => api.delete(`/users/${id}`)
 };
 
+// Directory API - for shippers to view carriers and carriers to view shippers
+export const directoryAPI = {
+  getCarriers: (params) => api.get('/directory/carriers', { params }),
+  getCarrierProfile: (id) => api.get(`/directory/carriers/${id}`),
+  getShippers: (params) => api.get('/directory/shippers', { params }),
+  getShipperProfile: (id) => api.get(`/directory/shippers/${id}`)
+};
+
 export default api;

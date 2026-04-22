@@ -4,6 +4,8 @@ import { shipmentAPI } from '../../services';
 import { formatCurrency, formatDateTime } from '../../utils/helpers';
 import { Package, TrendingUp, Clock, CheckCircle, Plus, ArrowRight, Truck } from 'lucide-react';
 import toast from 'react-hot-toast';
+import CarrierDirectory from '../../components/CarrierDirectory';
+import ProfileModal from '../../components/ProfileModal';
 
 const Dashboard = () => {
   const [stats, setStats] = useState({
@@ -15,6 +17,7 @@ const Dashboard = () => {
   });
   const [recentShipments, setRecentShipments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedProfile, setSelectedProfile] = useState(null);
 
   useEffect(() => {
     loadDashboard();
@@ -101,118 +104,128 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-gray-600">Welcome back! Here's your shipment overview.</p>
+    <div className="flex gap-6">
+      <div className="flex-1 space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+            <p className="text-gray-600">Welcome back! Here's your shipment overview.</p>
+          </div>
+          <Link
+            to="/shipper/shipments/create"
+            className="inline-flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition"
+          >
+            <Plus size={20} className="mr-2" />
+            New Shipment
+          </Link>
         </div>
-        <Link
-          to="/shipper/shipments/create"
-          className="inline-flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition"
-        >
-          <Plus size={20} className="mr-2" />
-          New Shipment
-        </Link>
-      </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {statCards.map((stat) => {
-          const Icon = stat.icon;
-          return (
-            <div key={stat.label} className="bg-white rounded-xl shadow-sm p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600">{stat.label}</p>
-                  <p className="text-2xl font-bold text-gray-900 mt-1">{stat.value}</p>
-                </div>
-                <div className={`p-3 ${stat.bgColor} rounded-lg`}>
-                  <Icon className={stat.color} size={24} />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {statCards.map((stat) => {
+            const Icon = stat.icon;
+            return (
+              <div key={stat.label} className="bg-white rounded-xl shadow-sm p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600">{stat.label}</p>
+                    <p className="text-2xl font-bold text-gray-900 mt-1">{stat.value}</p>
+                  </div>
+                  <div className={`p-3 ${stat.bgColor} rounded-lg`}>
+                    <Icon className={stat.color} size={24} />
+                  </div>
                 </div>
               </div>
+            );
+          })}
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm p-6">
+          <div className="flex items-center">
+            <div className="p-3 bg-green-50 rounded-lg mr-4">
+              <TrendingUp className="text-green-600" size={24} />
             </div>
-          );
-        })}
-      </div>
-
-      {/* Spending Overview */}
-      <div className="bg-white rounded-xl shadow-sm p-6">
-        <div className="flex items-center">
-          <div className="p-3 bg-green-50 rounded-lg mr-4">
-            <TrendingUp className="text-green-600" size={24} />
-          </div>
-          <div>
-            <p className="text-sm text-gray-600">Total Spent</p>
-            <p className="text-2xl font-bold text-gray-900">{formatCurrency(stats.totalSpent)}</p>
+            <div>
+              <p className="text-sm text-gray-600">Total Spent</p>
+              <p className="text-2xl font-bold text-gray-900">{formatCurrency(stats.totalSpent)}</p>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Recent Shipments */}
-      <div className="bg-white rounded-xl shadow-sm">
-        <div className="p-6 border-b">
-          <h2 className="text-lg font-semibold text-gray-900">Recent Shipments</h2>
-        </div>
-        {recentShipments.length === 0 ? (
-          <div className="p-12 text-center">
-            <Package className="mx-auto h-12 w-12 text-gray-400" />
-            <h3 className="mt-4 text-lg font-medium text-gray-900">No shipments yet</h3>
-            <p className="mt-2 text-gray-500">Get started by creating your first shipment.</p>
-            <Link
-              to="/shipper/shipments/create"
-              className="mt-4 inline-flex items-center text-primary-600 hover:text-primary-700"
-            >
-              Create Shipment <ArrowRight size={16} className="ml-1" />
-            </Link>
+        <div className="bg-white rounded-xl shadow-sm">
+          <div className="p-6 border-b">
+            <h2 className="text-lg font-semibold text-gray-900">Recent Shipments</h2>
           </div>
-        ) : (
-          <div className="divide-y">
-            {recentShipments.map((shipment) => (
+          {recentShipments.length === 0 ? (
+            <div className="p-12 text-center">
+              <Package className="mx-auto h-12 w-12 text-gray-400" />
+              <h3 className="mt-4 text-lg font-medium text-gray-900">No shipments yet</h3>
+              <p className="mt-2 text-gray-500">Get started by creating your first shipment.</p>
               <Link
-                key={shipment._id}
-                to={`/shipper/shipments/${shipment._id}`}
-                className="block p-6 hover:bg-gray-50 transition"
+                to="/shipper/shipments/create"
+                className="mt-4 inline-flex items-center text-primary-600 hover:text-primary-700"
               >
-                <div className="flex items-center justify-between">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center space-x-3">
-                      <span className="text-sm font-medium text-primary-600">
-                        {shipment.shipmentNumber}
-                      </span>
-                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(shipment.status)}`}>
-                        {shipment.status.replace('_', ' ').toUpperCase()}
-                      </span>
-                    </div>
-                    <div className="mt-2 flex items-center space-x-4 text-sm text-gray-600">
-                      <span>{shipment.pickupLocation.city}</span>
-                      <span>→</span>
-                      <span>{shipment.deliveryLocation.city}</span>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-medium text-gray-900">
-                      {formatCurrency(shipment.pricing.acceptedPrice || shipment.pricing.quotedPrice)}
-                    </p>
-                    <p className="text-sm text-gray-500">{formatDateTime(shipment.pickupDate)}</p>
-                  </div>
-                </div>
+                Create Shipment <ArrowRight size={16} className="ml-1" />
               </Link>
-            ))}
-          </div>
-        )}
-        {recentShipments.length > 0 && (
-          <div className="p-4 border-t">
-            <Link
-              to="/shipper/shipments"
-              className="block text-center text-sm text-primary-600 hover:text-primary-700"
-            >
-              View all shipments →
-            </Link>
-          </div>
-        )}
+            </div>
+          ) : (
+            <div className="divide-y">
+              {recentShipments.map((shipment) => (
+                <Link
+                  key={shipment._id}
+                  to={`/shipper/shipments/${shipment._id}`}
+                  className="block p-6 hover:bg-gray-50 transition"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center space-x-3">
+                        <span className="text-sm font-medium text-primary-600">
+                          {shipment.shipmentNumber}
+                        </span>
+                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(shipment.status)}`}>
+                          {shipment.status.replace('_', ' ').toUpperCase()}
+                        </span>
+                      </div>
+                      <div className="mt-2 flex items-center space-x-4 text-sm text-gray-600">
+                        <span>{shipment.pickupLocation.city}</span>
+                        <span>→</span>
+                        <span>{shipment.deliveryLocation.city}</span>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-medium text-gray-900">
+                        {formatCurrency(shipment.pricing.acceptedPrice || shipment.pricing.quotedPrice)}
+                      </p>
+                      <p className="text-sm text-gray-500">{formatDateTime(shipment.pickupDate)}</p>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+          {recentShipments.length > 0 && (
+            <div className="p-4 border-t">
+              <Link
+                to="/shipper/shipments"
+                className="block text-center text-sm text-primary-600 hover:text-primary-700"
+              >
+                View all shipments →
+              </Link>
+            </div>
+          )}
+        </div>
       </div>
+
+      <div className="w-96 flex-shrink-0">
+        <CarrierDirectory onViewProfile={setSelectedProfile} />
+      </div>
+
+      {selectedProfile && (
+        <ProfileModal
+          profile={selectedProfile}
+          type="carrier"
+          onClose={() => setSelectedProfile(null)}
+        />
+      )}
     </div>
   );
 };
