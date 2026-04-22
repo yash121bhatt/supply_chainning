@@ -56,10 +56,26 @@ const PAYMENT_STATUS = {
 const NOTIFICATION_TYPES = {
   SHIPMENT_ASSIGNED: 'shipment_assigned',
   SHIPMENT_PICKED_UP: 'shipment_picked_up',
+  SHIPMENT_IN_TRANSIT: 'shipment_in_transit',
   SHIPMENT_DELIVERED: 'shipment_delivered',
   PAYMENT_RECEIVED: 'payment_received',
+  PAYMENT_RELEASED: 'payment_released',
   NEW_BID: 'new_bid',
+  BID_ACCEPTED: 'bid_accepted',
+  BID_REJECTED: 'bid_rejected',
+  BID_COUNTERED: 'bid_countered',
+  DRIVER_ASSIGNED: 'driver_assigned',
+  CHAT_MESSAGE: 'chat_message',
   SYSTEM: 'system'
+};
+
+// Bid statuses
+const BID_STATUS = {
+  PENDING: 'pending',
+  ACCEPTED: 'accepted',
+  REJECTED: 'rejected',
+  COUNTERED: 'countered',
+  WITHDRAWN: 'withdrawn'
 };
 
 module.exports = {
@@ -69,5 +85,6 @@ module.exports = {
   VEHICLE_TYPES,
   DOCUMENT_TYPES,
   PAYMENT_STATUS,
-  NOTIFICATION_TYPES
+  NOTIFICATION_TYPES,
+  BID_STATUS
 };

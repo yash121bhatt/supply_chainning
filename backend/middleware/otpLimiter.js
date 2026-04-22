@@ -2,7 +2,7 @@ const AppError = require('../utils/errorHandler').AppError;
 
 const otpAttemptStore = new Map();
 
-const MAX_OTP_ATTEMPTS = 3;
+const MAX_OTP_ATTEMPTS = 5;
 const WINDOW_MS = 15 * 60 * 1000; // 15 min window
 
 const otpLimiter = (req, res, next) => {

@@ -60,7 +60,7 @@ const updateStatusValidation = [
 
 // Shipper routes
 router.post('/', authorize('shipper'), validateAsync(createShipmentValidation), shipmentController.createShipment);
-router.get('/my-shipments', authorize('shipper'), shipmentController.getMyShipments);
+router.get('/my-shipments', authorize('shipper', 'carrier'), shipmentController.getMyShipments);
 router.get('/:id', shipmentController.getShipmentById);
 
 // Shipment status updates (Driver)
@@ -78,5 +78,6 @@ router.put('/:id/assign-driver', authorize('carrier'), shipmentController.assign
 router.put('/:id', shipmentController.updateShipment);
 router.delete('/:id', shipmentController.cancelShipment);
 router.get('/:id/tracking', shipmentController.trackShipment);
+router.post('/:id/rating', shipmentController.submitRating);
 
 module.exports = router;

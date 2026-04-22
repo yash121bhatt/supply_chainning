@@ -8,6 +8,7 @@ import VerifyEmail from './pages/VerifyEmail';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import ChangePassword from './pages/ChangePassword';
+import SetPassword from './pages/SetPassword';
 import Tracking from './pages/Tracking';
 
 import ShipperDashboard from './pages/shipper/Dashboard';
@@ -16,7 +17,8 @@ import CreateShipment from './pages/shipper/CreateShipment';
 import ShipperProfile from './pages/shipper/Profile';
 
 import CarrierDashboard from './pages/carrier/Dashboard';
-import CarrierShipments from './pages/carrier/AvailableShipments';
+import CarrierAvailableShipments from './pages/carrier/AvailableShipments';
+import CarrierMyShipments from './pages/carrier/MyShipments';
 import CarrierVehicles from './pages/carrier/Vehicles';
 import CarrierProfile from './pages/carrier/Profile';
 import CarrierDrivers from './pages/carrier/Drivers';
@@ -31,6 +33,8 @@ import AdminUsers from './pages/admin/Users';
 import AdminShipments from './pages/admin/Shipments';
 import AdminProfile from './pages/admin/Profile';
 import ShipmentDetail from './pages/shipper/ShipmentDetail';
+import Payment from './pages/shipper/Payment';
+import Transactions from './pages/Transactions';
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const { isAuthenticated, user } = useAuthStore();
@@ -68,6 +72,7 @@ function App() {
       <Route path="/verify-email" element={<VerifyEmail />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
+      <Route path="/set-password" element={<SetPassword />} />
 
       {/* Public Tracking */}
       <Route path="/tracking" element={<Tracking />} />
@@ -87,6 +92,8 @@ function App() {
         <Route path="shipments" element={<ShipperShipments />} />
         <Route path="shipments/create" element={<CreateShipment />} />
         <Route path="shipments/:id" element={<ShipmentDetail />} />
+        <Route path="payments/:id" element={<Payment />} />
+        <Route path="transactions" element={<Transactions />} />
         <Route path="profile" element={<ShipperProfile />} />
       </Route>
 
@@ -101,7 +108,8 @@ function App() {
       >
         <Route index element={<Navigate to="/carrier/dashboard" replace />} />
         <Route path="dashboard" element={<CarrierDashboard />} />
-        <Route path="shipments" element={<CarrierShipments />} />
+        <Route path="shipments" element={<CarrierAvailableShipments />} />
+        <Route path="my-shipments" element={<CarrierMyShipments />} />
         <Route path="vehicles" element={<CarrierVehicles />} />
         <Route path="drivers" element={<CarrierDrivers />} />
         <Route path="earnings" element={<CarrierEarnings />} />

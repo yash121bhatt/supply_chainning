@@ -29,6 +29,7 @@ const Layout = () => {
         return [
           { label: 'Dashboard', path: '/carrier/dashboard', icon: LayoutDashboard },
           { label: 'Available Loads', path: '/carrier/shipments', icon: Package },
+          { label: 'My Shipments', path: '/carrier/my-shipments', icon: Truck },
           { label: 'My Vehicles', path: '/carrier/vehicles', icon: Truck },
           { label: 'My Drivers', path: '/carrier/drivers', icon: Users },
           { label: 'Earnings', path: '/carrier/earnings', icon: DollarSign }

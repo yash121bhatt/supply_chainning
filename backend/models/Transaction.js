@@ -4,8 +4,7 @@ const { PAYMENT_STATUS } = require('../config/constants');
 const transactionSchema = new mongoose.Schema({
   transactionId: {
     type: String,
-    unique: true,
-    required: true
+    unique: true
   },
   shipment: {
     type: mongoose.Schema.Types.ObjectId,

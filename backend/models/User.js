@@ -62,6 +62,18 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
+  isInvited: {
+    type: Boolean,
+    default: false
+  },
+  inviteToken: {
+    type: String,
+    select: false
+  },
+  tokenExpiry: {
+    type: Date,
+    default: null
+  },
   // Shipper specific fields
   companyDetails: {
     companyName: String,
@@ -140,6 +152,8 @@ userSchema.methods.getPublicProfile = function() {
   delete user.emailOtp;
   delete user.emailOtpExpiry;
   delete user.emailOtpAttempts;
+  delete user.inviteToken;
+  delete user.tokenExpiry;
   return user;
 };
 

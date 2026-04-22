@@ -1,8 +1,10 @@
+const crypto = require('crypto');
 const asyncHandler = require('../utils/asyncHandler');
 const AppError = require('../utils/errorHandler').AppError;
 const Vehicle = require('../models/Vehicle');
 const Shipment = require('../models/Shipment');
 const User = require('../models/User');
+const { sendDriverInvitationEmail } = require('../utils/email');
 
 // Get carrier's vehicles
 exports.getMyVehicles = asyncHandler(async (req, res, next) => {
@@ -266,21 +268,25 @@ exports.inviteDriver = asyncHandler(async (req, res, next) => {
   const { name, email, phone, licenseNumber, licenseExpiry } = req.body;
   const carrierId = req.user._id;
 
-  // Check if driver already exists
   const existingDriver = await User.findOne({ email, role: 'driver' });
   if (existingDriver) {
     return next(new AppError('Driver with this email already exists', 400));
   }
 
-  // Generate temporary password
-  const tempPassword = Math.random().toString(36).slice(-8);
+  const inviteToken = crypto.randomBytes(32).toString('hex');
+  const tokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
   const driver = new User({
     name,
     email,
     phone,
-    password: tempPassword,
+    password: crypto.randomBytes(16).toString('hex'),
     role: 'driver',
+    isInvited: true,
+    inviteToken,
+    tokenExpiry,
+    isActive: false,
+    emailVerified: false,
     driverDetails: {
       licenseNumber,
       licenseExpiry,
@@ -290,11 +296,52 @@ exports.inviteDriver = asyncHandler(async (req, res, next) => {
 
   await driver.save();
 
-  // TODO: Send invitation email with temporary password
+  try {
+    await sendDriverInvitationEmail(email, name, inviteToken, req.user.carrierDetails?.companyName || req.user.name);
+  } catch (emailError) {
+    await User.findByIdAndDelete(driver._id);
+    return next(new AppError('Failed to send invitation email. Please check the email address and try again.', 500));
+  }
 
   res.status(201).json({
     success: true,
-    message: 'Driver invited successfully',
+    message: 'Driver invited successfully. They will receive an email to set their password.',
     data: { driver: driver.getPublicProfile() }
+  });
+});
+
+// Resend driver invitation
+exports.resendDriverInvite = asyncHandler(async (req, res, next) => {
+  const { driverId } = req.params;
+  const carrierId = req.user._id;
+
+  const driver = await User.findOne({
+    _id: driverId,
+    role: 'driver',
+    'driverDetails.assignedCarrier': carrierId
+  });
+
+  if (!driver) {
+    return next(new AppError('Driver not found', 404));
+  }
+
+  if (!driver.isInvited) {
+    return next(new AppError('This driver was not invited. Use the invite function instead.', 400));
+  }
+
+  const inviteToken = crypto.randomBytes(32).toString('hex');
+  driver.inviteToken = inviteToken;
+  driver.tokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
+  await driver.save();
+
+  try {
+    await sendDriverInvitationEmail(driver.email, driver.name, inviteToken, req.user.carrierDetails?.companyName || req.user.name);
+  } catch (emailError) {
+    return next(new AppError('Failed to send invitation email. Please try again.', 500));
+  }
+
+  res.status(200).json({
+    success: true,
+    message: 'Invitation resent successfully'
   });
 });

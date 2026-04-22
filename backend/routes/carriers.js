@@ -33,5 +33,6 @@ router.get('/earnings', carrierController.getCarrierEarnings);
 // Driver management
 router.get('/drivers', carrierController.getMyDrivers);
 router.post('/drivers/invite', carrierController.inviteDriver);
+router.post('/drivers/:driverId/resend-invite', carrierController.resendDriverInvite);
 
 module.exports = router;

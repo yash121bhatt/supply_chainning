@@ -43,7 +43,9 @@ const CreateShipment = () => {
     pricing: {
       quotedPrice: ''
     },
-    shipmentType: 'full_truckload'
+    shipmentType: 'full_truckload',
+    isPrivate: false,
+    allowedCarriers: []
   });
   const [loading, setLoading] = useState(false);
 
@@ -368,6 +370,45 @@ const CreateShipment = () => {
                 Quoted Price: {formatCurrency(parseFloat(formData.pricing.quotedPrice))}
               </p>
             )}
+          </div>
+        </div>
+
+        {/* Visibility */}
+        <div className="bg-white rounded-xl shadow-sm p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Visibility</h2>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 cursor-pointer" onClick={() => handleChange(null, 'isPrivate', false)}>
+              <div className="flex items-center">
+                <input
+                  type="radio"
+                  name="visibility"
+                  checked={!formData.isPrivate}
+                  onChange={() => handleChange(null, 'isPrivate', false)}
+                  className="w-4 h-4 text-primary-600"
+                />
+                <div className="ml-3">
+                  <p className="font-medium text-gray-900">Public Shipment</p>
+                  <p className="text-sm text-gray-500">Visible to all carriers</p>
+                </div>
+              </div>
+              <span className="text-2xl">🌐</span>
+            </div>
+            <div className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 cursor-pointer" onClick={() => handleChange(null, 'isPrivate', true)}>
+              <div className="flex items-center">
+                <input
+                  type="radio"
+                  name="visibility"
+                  checked={formData.isPrivate}
+                  onChange={() => handleChange(null, 'isPrivate', true)}
+                  className="w-4 h-4 text-primary-600"
+                />
+                <div className="ml-3">
+                  <p className="font-medium text-gray-900">Private Shipment</p>
+                  <p className="text-sm text-gray-500">Only selected carriers can view</p>
+                </div>
+              </div>
+              <span className="text-2xl">🔒</span>
+            </div>
           </div>
         </div>
 

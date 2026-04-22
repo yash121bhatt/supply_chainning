@@ -12,7 +12,7 @@ const fs = require('fs');
 // Multer config for avatar upload
 const avatarStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const dir = path.join(__dirname, '../../uploads/avatars');
+    const dir = path.join(__dirname, '../uploads/avatars');
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
     cb(null, dir);
   },
@@ -144,6 +144,9 @@ exports.login = asyncHandler(async (req, res, next) => {
 
   // Check if email is verified
   if (!user.emailVerified) {
+    if (user.isInvited && user.inviteToken) {
+      return next(new AppError('Please set your password first using the link sent to your email.', 403));
+    }
     return next(new AppError('Please verify your email address using OTP before logging in.', 403));
   }
 
@@ -415,5 +418,70 @@ exports.logout = asyncHandler(async (req, res, next) => {
   res.status(200).json({
     success: true,
     message: 'Logged out successfully'
+  });
+});
+
+// Set password from invitation token
+exports.setPasswordFromInvite = asyncHandler(async (req, res, next) => {
+  const { token, password } = req.body;
+
+  if (!token || !password) {
+    return next(new AppError('Token and password are required', 400));
+  }
+
+  if (password.length < 6) {
+    return next(new AppError('Password must be at least 6 characters', 400));
+  }
+
+  const user = await User.findOne({
+    inviteToken: token,
+    tokenExpiry: { $gt: Date.now() }
+  }).select('+inviteToken');
+
+  if (!user) {
+    return next(new AppError('Invalid or expired invitation link. Please request a new invitation.', 400));
+  }
+
+  if (user.role !== USER_ROLES.DRIVER) {
+    return next(new AppError('This link is only valid for driver accounts', 400));
+  }
+
+  user.password = password;
+  user.inviteToken = undefined;
+  user.tokenExpiry = undefined;
+  user.isActive = true;
+  user.emailVerified = true;
+  user.isVerified = true;
+  await user.save();
+
+  const authToken = generateToken({ id: user._id, role: user.role });
+
+  res.status(200).json({
+    success: true,
+    message: 'Password set successfully. You can now login.',
+    data: { token: authToken }
+  });
+});
+
+// Validate invite token (for frontend to check token validity)
+exports.validateInviteToken = asyncHandler(async (req, res, next) => {
+  const { token } = req.params;
+
+  const user = await User.findOne({
+    inviteToken: token,
+    tokenExpiry: { $gt: Date.now() }
+  });
+
+  if (!user) {
+    return next(new AppError('Invalid or expired invitation link', 400));
+  }
+
+  res.status(200).json({
+    success: true,
+    data: {
+      valid: true,
+      email: user.email,
+      name: user.name
+    }
   });
 });

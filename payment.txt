@@ -1,0 +1,63 @@
+                                                                                                                              
+● Got controller. Need to explain flow.Payment flow in this repo                                                               
+                                                                                                                               
+  Step: 1                                                                                                                      
+  Actor: Shipper                                               
+  Endpoint: POST /api/payments/create                                                                                          
+  What happens: • Accepts shipmentId.• Loads the shipment, ensures it’s assigned and the shipper owns it.• Calculates the
+  amount                                                                                                                       
+     (quoted or accepted price) and a 5 % commission.• Creates a Razorpay order via services/razorpay and a Transaction        
+  document
+     in Mongo (status: PENDING).                                                                                               
+  What gets stored: Transaction (payer=shipper, payee=carrier), Razorpay order ID, client‑side Razorpay config (key, amount,
+    orderID).
+  ────────────────────────────────────────
+  Step: 2                                                                                                                      
+  Actor: Client
+  Endpoint: Redirects to Razorpay checkout                                                                                     
+  What happens: Uses data returned from step 1 (orderID, key, amount). Razorpay signs the payment.
+  What gets stored:
+  ────────────────────────────────────────
+  Step: 3                                                                                                                      
+  Actor: Razorpay → Backend
+  Endpoint: POST /api/payments/verify                                                                                          
+  What happens: Receives Razorpay orderId, paymentId, signature and the transactionId generated in step 1.Verifies signature
+  via
+    services/razorpay.On success, updates the Transaction to COMPLETED, stores paymentId & signature, marks paidAt.Finds the
+    related Shipment, updates its payment sub‑document to COMPLETED and stores paymentId and paidAt.Creates a Notification of
+    type payment_received for the carrier.
+  What gets stored: Transaction (status: COMPLETED), Shipment payment.status = COMPLETED, notification.
+  ────────────────────────────────────────
+  Step: 4                                                                                                                      
+  Actor: Optional
+  Endpoint: GET /api/payments/status/:shipmentId                                                                               
+  What happens: Returns shipment’s current payment status and the latest transaction.
+  What gets stored:
+  ────────────────────────────────────────
+  Step: 5                                                                                                                      
+  Actor: Shipper / Admin (refund)
+  Endpoint: POST /api/payments/refund                                                                                          
+  What happens: Verify shipment exists, has a completed payment, hasn’t been delivered yet.Call Razorpay’s refundPayment,
+  attach
+    refund meta to Transaction (status: REFUNDED).Update shipment payment status to REFUNDED.
+  What gets stored: Transaction refund field, status updated, shipment payment status.
+  ────────────────────────────────────────
+  Step: 6                                                                                                                      
+  Actor: Carrier (after delivery)
+  Endpoint: POST /api/payments/release                                                                                         
+  What happens: Can be called once the shipment status is DELIVERED.Calculates settlement days (3 days). If settlement window
+    has passed, fetches the completed Transaction, calculates carrier payout (total from breakdown).Marks Transaction payout
+    details (payout.amount, payout.status, payoutAt).Creates a payment_released notification for the carrier.
+  What gets stored: Transaction payout, notification.
+
+  Key points                                                                                                                   
+   
+  - Two‑step flow: create order → client pays → backend verifies.                                                              
+  - Commission: 5 % deducted at create time. Payout to carrier only on release.
+  - Notifications: Shipper sees payment released, carrier sees payment received and released.                                  
+  - Transactions table acts as a ledger: each row knows payer, payee, amount, status, gateway details, commission, etc.        
+                                                                                                                               
+  That’s the end‑to‑end payment lifecycle for a shipment in this codebase. 
+
+
+  opencloudekey:- sk-uY7RjJB2rdw70GGZJXZW17DwRFSeOvie4CGnYlLbFu3kVU3XiSXn113unJKakfsR

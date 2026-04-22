@@ -15,7 +15,9 @@ export const authAPI = {
   },
   forgotPassword: (data) => api.post('/auth/forgot-password', data),
   resetPassword: (data) => api.post('/auth/reset-password', data),
-  verifyEmail: (data) => api.post('/auth/verify-email', data)
+  verifyEmail: (data) => api.post('/auth/verify-email', data),
+  setPassword: (data) => api.post('/auth/set-password', data),
+  validateInviteToken: (token) => api.get(`/auth/validate-invite/${token}`)
 };
 
 // Users API (Admin)
@@ -54,7 +56,8 @@ export const carrierAPI = {
   getDashboard: () => api.get('/carriers/dashboard'),
   getEarnings: (params) => api.get('/carriers/earnings', { params }),
   getDrivers: (params) => api.get('/carriers/drivers', { params }),
-  inviteDriver: (data) => api.post('/carriers/drivers/invite', data)
+  inviteDriver: (data) => api.post('/carriers/drivers/invite', data),
+  resendDriverInvite: (driverId) => api.post(`/carriers/drivers/${driverId}/resend-invite`)
 };
 
 // Driver API
@@ -70,14 +73,44 @@ export const driverAPI = {
 
 // Chat API
 export const chatAPI = {
-  getByShipment: (shipmentId) => api.get(`/shipments/${shipmentId}/chat`),
-  sendMessage: (shipmentId, message) => api.post(`/shipments/${shipmentId}/chat`, message)
+  getOrCreate: (shipmentId) => api.post('/chat', { shipmentId }),
+  getMessages: (chatId, params) => api.get(`/chat/${chatId}/messages`, { params }),
+  sendMessage: (chatId, data) => api.post(`/chat/${chatId}/messages`, data),
+  markAsRead: (chatId) => api.put(`/chat/${chatId}/read`),
+  getMyChats: () => api.get('/chat')
 };
 
-// Notification API (via general endpoint if available)
+// Notification API
 export const notificationAPI = {
   getMy: (params) => api.get('/notifications', { params }),
-  markRead: (id) => api.put(`/notifications/${id}/read`)
+  markRead: (id) => api.put(`/notifications/${id}/read`),
+  markAllRead: () => api.put('/notifications/read-all'),
+  getUnreadCount: () => api.get('/notifications/unread-count'),
+  deleteNotification: (id) => api.delete(`/notifications/${id}`),
+  deleteAll: () => api.delete('/notifications')
+};
+
+// Bid API
+export const bidAPI = {
+  placeBid: (data) => api.post('/bids', data),
+  getMyBids: (params) => api.get('/bids/my-bids', { params }),
+  getById: (id) => api.get(`/bids/${id}`),
+  getBidsForShipment: (shipmentId) => api.get(`/bids/shipment/${shipmentId}`),
+  acceptBid: (id) => api.put(`/bids/${id}/accept`),
+  rejectBid: (id) => api.put(`/bids/${id}/reject`),
+  counterOffer: (id, data) => api.put(`/bids/${id}/counter`, data),
+  respondToCounter: (id, data) => api.put(`/bids/${id}/respond-counter`, data),
+  withdrawBid: (id) => api.put(`/bids/${id}/withdraw`)
+};
+
+// Payment API
+export const paymentAPI = {
+  createPayment: (shipmentId) => api.post('/payments/create', { shipmentId }),
+  verifyPayment: (data) => api.post('/payments/verify', data),
+  getPaymentStatus: (shipmentId) => api.get(`/payments/status/${shipmentId}`),
+  initiateRefund: (data) => api.post('/payments/refund', data),
+  releasePayment: (shipmentId) => api.post('/payments/release', { shipmentId }),
+  getTransactions: (params) => api.get('/payments/transactions', { params })
 };
 
 // Admin API

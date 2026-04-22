@@ -4,6 +4,7 @@ import { shipmentAPI } from '../../services';
 import { formatCurrency, formatDate, getShipmentStatusColor, getShipmentStatusLabel } from '../../utils/helpers';
 import { Package, MapPin, Weight, Calendar, DollarSign, Check, X } from 'lucide-react';
 import toast from 'react-hot-toast';
+import BiddingPanel from '../../components/BiddingPanel';
 
 const AvailableShipments = () => {
   const [shipments, setShipments] = useState([]);
@@ -13,6 +14,8 @@ const AvailableShipments = () => {
     deliveryLocation: '',
     shipmentType: ''
   });
+  const [showBidModal, setShowBidModal] = useState(false);
+  const [selectedShipment, setSelectedShipment] = useState(null);
 
   useEffect(() => {
     loadShipments();
@@ -22,7 +25,7 @@ const AvailableShipments = () => {
     setLoading(true);
     try {
       const response = await shipmentAPI.getAvailable(filters);
-      setShipments(response.data.shipments);
+      setShipments(response.data?.shipments || []);
     } catch (error) {
       toast.error('Failed to load available shipments');
     } finally {
@@ -53,6 +56,18 @@ const AvailableShipments = () => {
     } catch (error) {
       toast.error('Failed to reject shipment');
     }
+  };
+
+  const openBidModal = (shipment) => {
+    setSelectedShipment(shipment);
+    setShowBidModal(true);
+  };
+
+  const handleBidPlaced = () => {
+    loadShipments();
+    setShowBidModal(false);
+    setSelectedShipment(null);
+    toast.success('Bid placed successfully!');
   };
 
   if (loading) {
@@ -179,11 +194,16 @@ const AvailableShipments = () => {
               {/* Card Actions */}
               <div className="p-4 bg-gray-50 flex space-x-2">
                 <button
-                  onClick={() => handleAccept(shipment._id)}
-                  className="flex-1 flex items-center justify-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition"
+                  onClick={() => openBidModal(shipment)}
+                  className="flex-1 flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
                 >
-                  <Check size={18} className="mr-2" />
-                  Accept
+                  Place Bid
+                </button>
+                <button
+                  onClick={() => handleAccept(shipment._id)}
+                  className="flex items-center justify-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
+                >
+                  <Check size={18} />
                 </button>
                 <button
                   onClick={() => handleReject(shipment._id)}
@@ -194,6 +214,19 @@ const AvailableShipments = () => {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {showBidModal && selectedShipment && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <BiddingPanel
+            shipment={selectedShipment}
+            onBidPlaced={handleBidPlaced}
+            onClose={() => {
+              setShowBidModal(false);
+              setSelectedShipment(null);
+            }}
+          />
         </div>
       )}
     </div>

@@ -77,6 +77,8 @@ router.post('/forgot-password', validateAsync(forgotPasswordValidation), authCon
 router.post('/reset-password', validateAsync(resetPasswordValidation), authController.resetPassword);
 router.post('/verify-email', authController.verifyEmail);
 router.post('/resend-otp', otpLimiter, authController.resendOTP);
+router.post('/set-password', authController.setPasswordFromInvite);
+router.get('/validate-invite/:token', authController.validateInviteToken);
 
 // Protected routes
 router.get('/me', protect, authController.getMe);

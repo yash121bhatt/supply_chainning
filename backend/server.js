@@ -11,8 +11,13 @@ const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');
 const shipmentRoutes = require('./routes/shipments');
 const carrierRoutes = require('./routes/carriers');
+const bidRoutes = require('./routes/bids');
 const driverRoutes = require('./routes/drivers');
 const adminRoutes = require('./routes/admin');
+const paymentRoutes = require('./routes/payments');
+const notificationRoutes = require('./routes/notifications');
+const chatRoutes = require('./routes/chat');
+const errorHandler = require('./utils/errorHandler');
 
 // Initialize app
 const app = express();
@@ -48,7 +53,7 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Static files for uploads
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/api/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Database connection
 mongoose.connect(process.env.MONGODB_URI)
@@ -61,7 +66,11 @@ app.use('/api/users', userRoutes);
 app.use('/api/shipments', shipmentRoutes);
 app.use('/api/carriers', carrierRoutes);
 app.use('/api/drivers', driverRoutes);
+app.use('/api/payments', paymentRoutes);
+app.use('/api/bids', bidRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/chat', chatRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -69,14 +78,7 @@ app.get('/api/health', (req, res) => {
 });
 
 // Error handling middleware
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(err.status || 500).json({
-    success: false,
-    message: err.message || 'Internal server error',
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
-  });
-});
+app.use(errorHandler);
 
 // 404 handler
 app.use((req, res) => {

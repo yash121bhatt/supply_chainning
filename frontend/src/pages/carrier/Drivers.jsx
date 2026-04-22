@@ -1,14 +1,16 @@
 import { useEffect, useState } from 'react';
 import { carrierAPI } from '../../services';
-import { formatDateTime, getShipmentStatusColor } from '../../utils/helpers';
+import { formatDateTime } from '../../utils/helpers';
 import toast from 'react-hot-toast';
-import { Users, Plus, Phone, Mail, CheckCircle, XCircle, RefreshCw, Search } from 'lucide-react';
+import { Users, Plus, Phone, Mail, CheckCircle, XCircle, RefreshCw, Search, Loader2 } from 'lucide-react';
 
 const CarrierDrivers = () => {
   const [drivers, setDrivers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [search, setSearch] = useState('');
+  const [inviting, setInviting] = useState(false);
+  const [resendingId, setResendingId] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -26,8 +28,8 @@ const CarrierDrivers = () => {
     try {
       const response = await carrierAPI.getDrivers();
       setDrivers(response.data.drivers);
-    } catch {
-      toast.error('Failed to load drivers');
+    } catch (error) {
+      toast.error(error.message || 'Failed to load drivers');
     } finally {
       setLoading(false);
     }
@@ -35,14 +37,29 @@ const CarrierDrivers = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setInviting(true);
     try {
       await carrierAPI.inviteDriver(formData);
-      toast.success(`${formData.name} has been invited successfully!`);
+      toast.success(`${formData.name} has been invited successfully! They will receive an email to set their password.`);
       setShowModal(false);
       setFormData({ name: '', email: '', phone: '', licenseNumber: '', licenseExpiry: '' });
       loadDrivers();
-    } catch {
-      toast.error('Failed to invite driver');
+    } catch (error) {
+      toast.error(error.message || 'Failed to invite driver');
+    } finally {
+      setInviting(false);
+    }
+  };
+
+  const handleResendInvite = async (driverId, driverName) => {
+    setResendingId(driverId);
+    try {
+      await carrierAPI.resendDriverInvite(driverId);
+      toast.success(`Invitation resent to ${driverName}!`);
+    } catch (error) {
+      toast.error(error.message || 'Failed to resend invitation');
+    } finally {
+      setResendingId(null);
     }
   };
 
@@ -50,6 +67,16 @@ const CarrierDrivers = () => {
     d.name.toLowerCase().includes(search.toLowerCase()) ||
     d.email.toLowerCase().includes(search.toLowerCase())
   );
+
+  const getStatusBadge = (driver) => {
+    if (driver.isActive && driver.emailVerified) {
+      return <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">Active</span>;
+    }
+    if (driver.isInvited && !driver.isActive) {
+      return <span className="px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full">Pending Activation</span>;
+    }
+    return <span className="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded-full">Inactive</span>;
+  };
 
   return (
     <div className="space-y-6">
@@ -101,11 +128,7 @@ const CarrierDrivers = () => {
                   </div>
                   <div>
                     <p className="font-semibold text-gray-900">{driver.name}</p>
-                    <span className={`inline-block mt-1 px-2 py-0.5 text-xs font-medium rounded-full ${
-                      driver.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                    }`}>
-                      {driver.isActive ? 'Active' : 'Inactive'}
-                    </span>
+                    {getStatusBadge(driver)}
                   </div>
                 </div>
               </div>
@@ -137,8 +160,19 @@ const CarrierDrivers = () => {
 
               <div className="mt-4 pt-4 border-t flex items-center justify-between">
                 <p className="text-xs text-gray-500">Joined {formatDateTime(driver.createdAt)}</p>
-                {!driver.isVerified && (
-                  <span className="px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full">Not verified</span>
+                {driver.isInvited && !driver.emailVerified && (
+                  <button
+                    onClick={() => handleResendInvite(driver._id, driver.name)}
+                    disabled={resendingId === driver._id}
+                    className="flex items-center px-2 py-1 text-xs font-medium text-primary-600 hover:text-primary-700 hover:bg-primary-50 rounded transition"
+                  >
+                    {resendingId === driver._id ? (
+                      <Loader2 size={12} className="animate-spin mr-1" />
+                    ) : (
+                      <RefreshCw size={12} className="mr-1" />
+                    )}
+                    Resend Invite
+                  </button>
                 )}
               </div>
             </div>
@@ -152,7 +186,7 @@ const CarrierDrivers = () => {
           <div className="bg-white rounded-xl shadow-xl max-w-lg w-full">
             <div className="p-6 border-b">
               <h2 className="text-xl font-bold text-gray-900">Invite New Driver</h2>
-              <p className="text-sm text-gray-600 mt-1">A temporary password will be generated and auto-assigned to your company.</p>
+              <p className="text-sm text-gray-600 mt-1">An invitation email will be sent to the driver with a link to set their password.</p>
             </div>
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
               {[
@@ -181,13 +215,16 @@ const CarrierDrivers = () => {
                   type="button"
                   onClick={() => { setShowModal(false); setFormData({ name: '', email: '', phone: '', licenseNumber: '', licenseExpiry: '' }); }}
                   className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
+                  disabled={inviting}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition"
+                  disabled={inviting}
+                  className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition disabled:opacity-50 flex items-center"
                 >
+                  {inviting && <Loader2 size={16} className="animate-spin mr-2" />}
                   Send Invite
                 </button>
               </div>

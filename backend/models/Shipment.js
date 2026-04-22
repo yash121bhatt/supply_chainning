@@ -49,6 +49,14 @@ const shipmentSchema = new mongoose.Schema({
     enum: Object.values(SHIPMENT_TYPES),
     default: SHIPMENT_TYPES.FULL_TRUCKLOAD
   },
+  isPrivate: {
+    type: Boolean,
+    default: false
+  },
+  allowedCarriers: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  }],
   // Pickup location
   pickupLocation: {
     type: locationSchema,

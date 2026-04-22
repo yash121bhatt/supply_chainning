@@ -30,14 +30,16 @@ exports.createShipment = asyncHandler(async (req, res, next) => {
 
 // Get my shipments (Shipper)
 exports.getMyShipments = asyncHandler(async (req, res, next) => {
-  const shipperId = req.user._id;
+  const userId = req.user._id;
+  const userRole = req.user.role;
   const { status, page = 1, limit = 20 } = req.query;
 
-  const query = { shipper: shipperId };
+  const query = userRole === 'shipper' ? { shipper: userId } : { carrier: userId };
   if (status) query.status = status;
 
   const shipments = await Shipment.find(query)
-    .populate('carrier', 'name email phone avatar')
+    .populate('shipper', 'name email phone companyDetails')
+    .populate('carrier', 'name email phone carrierDetails')
     .populate('driver', 'name phone avatar')
     .populate('vehicle', 'vehicleNumber vehicleType brand model')
     .sort({ createdAt: -1 })
@@ -95,14 +97,18 @@ exports.getShipmentById = asyncHandler(async (req, res, next) => {
 
 // Get available shipments (Carrier)
 exports.getAvailableShipments = asyncHandler(async (req, res, next) => {
-  const { page = 1, limit = 20, pickupLocation, deliveryLocation, shipmentType } = req.query;
+  const { page = 1, limit = 20, pickupLocation, deliveryLocation, shipmentType, weightMin, weightMax } = req.query;
+  const carrierId = req.user._id;
 
   const query = {
     status: SHIPMENT_STATUS.PENDING,
-    carrier: null
+    carrier: null,
+    $or: [
+      { isPrivate: false },
+      { isPrivate: true, allowedCarriers: carrierId }
+    ]
   };
 
-  // Add location filters if provided
   if (pickupLocation) {
     query['pickupLocation.city'] = { $regex: pickupLocation, $options: 'i' };
   }
@@ -115,9 +121,15 @@ exports.getAvailableShipments = asyncHandler(async (req, res, next) => {
     query.shipmentType = shipmentType;
   }
 
+  if (weightMin || weightMax) {
+    query['goodsDetails.weight'] = {};
+    if (weightMin) query['goodsDetails.weight'].$gte = parseFloat(weightMin);
+    if (weightMax) query['goodsDetails.weight'].$lte = parseFloat(weightMax);
+  }
+
   const shipments = await Shipment.find(query)
     .populate('shipper', 'name companyDetails')
-    .sort({ pickupDate: 1 })
+    .sort({ createdAt: -1 })
     .skip((page - 1) * limit)
     .limit(parseInt(limit));
 
@@ -219,7 +231,7 @@ exports.assignDriver = asyncHandler(async (req, res, next) => {
   }
 
   // Verify driver belongs to carrier
-  const driver = await User.findOne({ _id: driverId, driverDetails: { assignedCarrier: req.user._id } });
+  const driver = await User.findOne({ _id: driverId, 'driverDetails.assignedCarrier': req.user._id });
   if (!driver) {
     return next(new AppError('Driver not found or not assigned to your company', 404));
   }
@@ -453,5 +465,55 @@ exports.trackShipment = asyncHandler(async (req, res, next) => {
   res.status(200).json({
     success: true,
     data: { shipment }
+  });
+});
+
+// Submit rating
+exports.submitRating = asyncHandler(async (req, res, next) => {
+  const { id } = req.params;
+  const { rating, review, type } = req.body;
+  const userId = req.user._id;
+
+  if (!rating || rating < 1 || rating > 5) {
+    return next(new AppError('Rating must be between 1 and 5', 400));
+  }
+
+  const shipment = await Shipment.findById(id);
+  if (!shipment) {
+    return next(new AppError('Shipment not found', 404));
+  }
+
+  if (shipment.status !== SHIPMENT_STATUS.DELIVERED) {
+    return next(new AppError('Can only rate delivered shipments', 400));
+  }
+
+  const ratingData = {
+    rating,
+    review,
+    createdAt: new Date()
+  };
+
+  if (type === 'shipper') {
+    if (shipment.shipper.toString() !== userId.toString()) {
+      return next(new AppError('Only shipper can submit this rating', 403));
+    }
+    if (shipment.driver) {
+      shipment.driverRating = ratingData;
+    } else {
+      shipment.carrierRating = ratingData;
+    }
+  } else if (type === 'carrier') {
+    if (shipment.carrier?.toString() !== userId.toString()) {
+      return next(new AppError('Only carrier can submit this rating', 403));
+    }
+    shipment.shipperRating = ratingData;
+  }
+
+  await shipment.save();
+
+  res.status(200).json({
+    success: true,
+    message: 'Rating submitted successfully',
+    data: { rating: ratingData }
   });
 });

@@ -2,14 +2,22 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { shipmentAPI } from '../../services';
 import { formatCurrency, formatDateTime, getShipmentStatusColor, getShipmentStatusLabel } from '../../utils/helpers';
-import { Package, MapPin, Calendar, DollarSign, Truck, User, ArrowLeft, Clock, FileText, Star } from 'lucide-react';
+import { Package, MapPin, Calendar, DollarSign, Truck, User, ArrowLeft, Clock, FileText, Star, MessageCircle, CreditCard } from 'lucide-react';
 import toast from 'react-hot-toast';
+import ChatPanel from '../../components/ChatPanel';
+import api from '../../services/api';
+import useAuthStore from '../../context/AuthContext';
 
 const ShipmentDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuthStore();
   const [shipment, setShipment] = useState(null);
+  const [bids, setBids] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showChat, setShowChat] = useState(false);
+  const [counterAmount, setCounterAmount] = useState('');
+  const [selectedBid, setSelectedBid] = useState(null);
 
   useEffect(() => {
     loadShipment();
@@ -20,11 +28,61 @@ const ShipmentDetail = () => {
     try {
       const res = await shipmentAPI.getById(id);
       setShipment(res.data?.shipment || res.shipment || res.data);
+      await loadBids();
     } catch (error) {
       toast.error('Failed to load shipment details');
       navigate('/shipper/shipments');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadBids = async () => {
+    try {
+      const data = await api.get(`/bids/shipment/${id}`);
+      setBids(data.bids || []);
+    } catch (error) {
+      console.error('Failed to load bids:', error);
+    }
+  };
+
+  const handleAcceptBid = async (bidId) => {
+    try {
+      await api.put(`/bids/${bidId}/accept`);
+      toast.success('Bid accepted successfully');
+      loadShipment();
+      loadBids();
+    } catch (error) {
+      toast.error(error.message || 'Failed to accept bid');
+    }
+  };
+
+  const handleRejectBid = async (bidId) => {
+    try {
+      await api.put(`/bids/${bidId}/reject`);
+      toast.success('Bid rejected');
+      loadBids();
+    } catch (error) {
+      toast.error(error.message || 'Failed to reject bid');
+    }
+  };
+
+  const openCounterModal = (bid) => {
+    setSelectedBid(bid);
+    setCounterAmount(bid.amount.toString());
+  };
+
+  const handleCounterOffer = async () => {
+    if (!selectedBid || !counterAmount) return;
+    try {
+      await api.put(`/bids/${selectedBid._id}/counter`, {
+        counterAmount: parseFloat(counterAmount)
+      });
+      toast.success('Counter offer sent');
+      setSelectedBid(null);
+      loadBids();
+    } catch (error) {
+      toast.error(error.message || 'Failed to send counter offer');
     }
   };
 
@@ -68,7 +126,14 @@ const ShipmentDetail = () => {
           <h1 className="text-2xl font-bold text-gray-900">{shipment.shipmentNumber}</h1>
           <p className="text-gray-600">Shipment Details</p>
         </div>
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-3">
+          <button
+            onClick={() => setShowChat(true)}
+            className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+          >
+            <MessageCircle size={18} />
+            Chat
+          </button>
           <span className={`px-3 py-1 text-sm font-medium rounded-full ${getShipmentStatusColor(shipment.status)}`}>
             {getShipmentStatusLabel(shipment.status)}
           </span>
@@ -293,8 +358,75 @@ const ShipmentDetail = () => {
         </div>
       )}
 
+      {/* Bids Section (for shipper with pending shipments) */}
+      {user?.role === 'shipper' && bids.length > 0 && shipment.status === 'pending' && (
+        <div className="bg-white rounded-xl shadow-sm p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+            Bids Received ({bids.length})
+          </h2>
+          <div className="space-y-4">
+            {bids.map((bid) => (
+              <div key={bid._id} className="p-4 border border-gray-200 rounded-lg">
+                <div className="flex justify-between items-start mb-2">
+                  <div>
+                    <p className="font-medium text-gray-900">{bid.carrier?.name || 'Carrier'}</p>
+                    <p className="text-sm text-gray-500">{bid.carrier?.carrierDetails?.companyName || ''}</p>
+                  </div>
+                  <span className={`px-2 py-0.5 text-xs rounded-full ${
+                    bid.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                    bid.status === 'countered' ? 'bg-blue-100 text-blue-800' :
+                    bid.status === 'accepted' ? 'bg-green-100 text-green-800' :
+                    'bg-gray-100 text-gray-800'
+                  }`}>
+                    {bid.status}
+                  </span>
+                </div>
+                <div className="text-lg font-bold text-green-600 mb-2">₹{bid.amount}</div>
+                {bid.notes && <p className="text-sm text-gray-600 mb-3">{bid.notes}</p>}
+                <div className="flex gap-2">
+                  {bid.status === 'pending' && (
+                    <>
+                      <button
+                        onClick={() => handleAcceptBid(bid._id)}
+                        className="flex-1 bg-green-600 text-white py-2 rounded text-sm hover:bg-green-700"
+                      >
+                        Accept
+                      </button>
+                      <button
+                        onClick={() => openCounterModal(bid)}
+                        className="flex-1 bg-blue-600 text-white py-2 rounded text-sm hover:bg-blue-700"
+                      >
+                        Counter
+                      </button>
+                      <button
+                        onClick={() => handleRejectBid(bid._id)}
+                        className="flex-1 border border-gray-300 py-2 rounded text-sm hover:bg-gray-50"
+                      >
+                        Reject
+                      </button>
+                    </>
+                  )}
+                  {bid.status === 'countered' && (
+                    <span className="text-sm text-blue-600">Awaiting carrier response...</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Actions */}
       <div className="flex justify-end space-x-4">
+        {user?.role === 'shipper' && shipment.status === 'assigned' && shipment.payment?.status !== 'completed' && (
+          <button
+            onClick={() => navigate(`/shipper/payments/${id}`)}
+            className="flex items-center gap-2 px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition"
+          >
+            <CreditCard size={18} />
+            Pay Now
+          </button>
+        )}
         {canCancel && (
           <button
             onClick={handleCancel}
@@ -304,6 +436,45 @@ const ShipmentDetail = () => {
           </button>
         )}
       </div>
+
+      {showChat && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <ChatPanel
+            shipmentId={shipment._id}
+            onClose={() => setShowChat(false)}
+          />
+        </div>
+      )}
+
+      {selectedBid && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
+            <h3 className="text-lg font-semibold mb-4">Counter Offer</h3>
+            <p className="text-sm text-gray-600 mb-4">Current bid: ₹{selectedBid.amount}</p>
+            <input
+              type="number"
+              value={counterAmount}
+              onChange={(e) => setCounterAmount(e.target.value)}
+              placeholder="Enter counter amount"
+              className="w-full rounded-md border border-gray-300 px-3 py-2 mb-4 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+            <div className="flex gap-3">
+              <button
+                onClick={handleCounterOffer}
+                className="flex-1 bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700"
+              >
+                Send Counter
+              </button>
+              <button
+                onClick={() => setSelectedBid(null)}
+                className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
