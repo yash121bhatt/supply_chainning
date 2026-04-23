@@ -50,3 +50,4 @@ temp/
 .cache/
 .parcel-cache/
 .claude/
+payment.txt

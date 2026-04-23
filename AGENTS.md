@@ -7,7 +7,7 @@ Monorepo (npm workspaces): backend + frontend. Four role-based portals: admin, s
 ```bash
 npm run dev                    # Backend (5000) + frontend (5173)
 cd backend && npm run dev      # Backend only (nodemon)
-cd backend && npm test         # Jest with coverage
+cd backend && npm test         # Jest + coverage (requires MONGODB_URI)
 cd backend && npm test -- --testNamePattern="pattern"  # Single test
 cd backend && npm run create-admin  # Creates admin@supplychain.com / admin123
 cd frontend && npm run lint    # ESLint (max-warnings: 100)
@@ -18,20 +18,21 @@ cd frontend && npm run build   # Production build → dist/
 
 | Layer | Location |
 |-------|----------|
-| Backend entry | `backend/server.js` (default port: 5000) |
-| Constants/enums | `backend/config/constants.js` (USER_ROLES, SHIPMENT_STATUS, etc.) |
-| Controllers | `backend/controllers/` (uses asyncHandler wrapper) |
-| Models | `backend/models/` |
-| Frontend router | `frontend/src/App.jsx` (React Router v7) |
+| Backend entry | `backend/server.js` (port 5000, Socket.io attached) |
+| Constants/enums | `backend/config/constants.js` |
+| Controllers | `backend/controllers/` (asyncHandler wrapper) |
+| Routes | `backend/routes/` (auth, shipments, carriers, drivers, bids, admin, payments, notifications, chat, users, directory) |
+| Models | `backend/models/` (User, Shipment, Vehicle, Bid, Chat, Notification, Transaction) |
+| Test files | `backend/tests/*.test.js` |
+| Frontend entry | `frontend/src/App.jsx` (React Router v7) |
 | Auth state | `frontend/src/context/AuthContext.jsx` (Zustand + persist) |
-| API client | `frontend/src/services/api.js` (axios with interceptors) |
-| Real-time | Socket.io on backend server |
+| API client | `frontend/src/services/api.js` (axios, response unwrapped via interceptor) |
 
-**Note**: `backend/src/` is unused/legacy—ignore it.
+Note: `backend/src/` is a duplicate directory structure (controllers/routes/services/models) that is not referenced by server.js or any route file.
 
 ## Key Patterns
 
-### Backend: asyncHandler wrapper
+### Backend: asyncHandler + error handling
 ```javascript
 exports.handler = asyncHandler(async (req, res, next) => {
   if (!data) return next(new AppError('Not found', 404));
@@ -39,15 +40,16 @@ exports.handler = asyncHandler(async (req, res, next) => {
 });
 ```
 
-### Backend: Error handling
-- Use `AppError`: `next(new AppError('message', statusCode))`
-- Always return after `next()`: `return next(new AppError(...))`
-
-### Frontend: Axios interceptor unwraps responses
+### Frontend: API response unwrapping
 ```javascript
-// API returns response.data directly
+// api.js interceptor returns response.data directly
 const { shipments } = await api.get('/shipments');
-// Controller sends { success: true, data: { shipments } }
+// Controller: { success: true, data: { shipments } }
+
+// FormData works automatically - Content-Type header auto-removed
+const formData = new FormData();
+formData.append('file', file);
+await api.post('/upload', formData);
 ```
 
 ### Frontend: Nested routes (React Router v7)
@@ -57,7 +59,7 @@ const { shipments } = await api.get('/shipments');
   <Route path="dashboard" element={<ShipperDashboard />} />
 </Route>
 ```
-Use `<Layout><Outlet /></Layout>` pattern. Do NOT nest `<Routes>` inside `<Routes>`.
+Use `<Layout><Outlet /></Layout>`. Do NOT nest `<Routes>` inside `<Routes>`.
 
 ### Role-based access
 - Roles: `admin`, `shipper`, `carrier`, `driver`
