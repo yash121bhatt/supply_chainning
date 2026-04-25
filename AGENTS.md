@@ -5,13 +5,17 @@ Monorepo (npm workspaces): backend + frontend. Four role-based portals: admin, s
 ## Commands
 
 ```bash
-npm run dev                    # Backend (5000) + frontend (5173)
-cd backend && npm run dev      # Backend only (nodemon)
-cd backend && npm test         # Jest + coverage (requires MONGODB_URI)
-cd backend && npm test -- --testNamePattern="pattern"  # Single test
-cd backend && npm run create-admin  # Creates admin@supplychain.com / admin123
-cd frontend && npm run lint    # ESLint (max-warnings: 100)
-cd frontend && npm run build   # Production build → dist/
+npm run dev                         # Backend (5000) + frontend (5173)
+cd backend && npm run dev           # Backend only
+cd backend && npm test             # Jest + coverage (requires MONGODB_URI)
+cd backend && npm run create-admin # Creates admin@supplychain.com / admin123
+cd frontend && npm run lint        # ESLint (fails at 100+ warnings)
+cd frontend && npm run build       # Production → dist/
+```
+
+## Env Setup
+```bash
+cp .env.example .env  # Edit with credentials
 ```
 
 ## Architecture
@@ -81,7 +85,3 @@ describe('Auth', () => {
   });
 });
 ```
-
-## Environment
-
-Copy `.env.example` to `.env`. Required: `MONGODB_URI`, `JWT_SECRET`, `JWT_EXPIRE`, `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `GOOGLE_MAPS_API_KEY`, `CLIENT_URL`, `AWS_*`, `SMTP_*`, `REDIS_URL`, `PORT`.

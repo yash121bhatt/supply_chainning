@@ -5,35 +5,7 @@ const AppError = require('../utils/errorHandler').AppError;
 const User = require('../models/User');
 const { USER_ROLES } = require('../config/constants');
 const { sendVerificationEmail } = require('../utils/email');
-const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
-
-// Multer config for avatar upload
-const avatarStorage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const dir = path.join(__dirname, '../uploads/avatars');
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    cb(null, dir);
-  },
-  filename: (req, file, cb) => {
-    const uniqueName = `${req.user.id}-${Date.now()}${path.extname(file.originalname)}`;
-    cb(null, uniqueName);
-  }
-});
-
-const avatarUpload = multer({
-  storage: avatarStorage,
-  limits: { fileSize: 2 * 1024 * 1024 }, // 2MB
-  fileFilter: (req, file, cb) => {
-    const allowed = ['image/jpeg', 'image/png', 'image/jpg'];
-    if (allowed.includes(file.mimetype)) {
-      cb(null, true);
-    } else {
-      cb(new AppError('Only JPG, JPEG, and PNG images are allowed', 400));
-    }
-  }
-});
+const { avatarUpload } = require('../utils/cloudinary');
 
 exports.uploadAvatarMiddleware = avatarUpload.single('avatar');
 
@@ -229,7 +201,7 @@ exports.uploadAvatar = asyncHandler(async (req, res, next) => {
     return next(new AppError('User not found', 404));
   }
 
-  const avatarUrl = `/uploads/avatars/${req.file.filename}`;
+  const avatarUrl = req.file.secure_url || `/uploads/avatars/${req.file.filename}`;
   user.avatar = avatarUrl;
   await user.save();
 

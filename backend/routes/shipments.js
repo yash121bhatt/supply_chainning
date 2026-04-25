@@ -4,6 +4,7 @@ const shipmentController = require('../controllers/shipmentController');
 const { protect, authorize } = require('../middleware/auth');
 const { body } = require('express-validator');
 const { validateAsync } = require('../middleware/validate');
+const { podUpload, uploadPOD } = require('../utils/cloudinary');
 
 // All routes require authentication
 router.use(protect);
@@ -66,7 +67,7 @@ router.get('/:id', shipmentController.getShipmentById);
 // Shipment status updates (Driver)
 router.put('/:id/status', authorize('driver'), validateAsync(updateStatusValidation), shipmentController.updateShipmentStatus);
 router.put('/:id/location', authorize('driver'), shipmentController.updateShipmentLocation);
-router.post('/:id/pod', authorize('driver'), shipmentController.uploadProofOfDelivery);
+router.post('/:id/pod', authorize('driver'), uploadPOD, shipmentController.uploadProofOfDelivery);
 
 // Carrier routes
 router.get('/available/list', authorize('carrier'), shipmentController.getAvailableShipments);

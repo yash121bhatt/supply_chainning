@@ -42,7 +42,13 @@ export const shipmentAPI = {
   update: (id, data) => api.put(`/shipments/${id}`, data),
   updateStatus: (id, data) => api.put(`/shipments/${id}/status`, data),
   updateLocation: (id, data) => api.put(`/shipments/${id}/location`, data),
-  uploadPOD: (id, data) => api.post(`/shipments/${id}/pod`, data),
+  uploadPOD: (id, data) => {
+    const formData = new FormData();
+    if (data.deliveryImage) formData.append('deliveryImage', data.deliveryImage);
+    if (data.signatureImage) formData.append('signatureImage', data.signatureImage);
+    if (data.receivedBy) formData.append('receivedBy', data.receivedBy);
+    return api.post(`/shipments/${id}/pod`, formData);
+  },
   cancel: (id) => api.delete(`/shipments/${id}`),
   track: (id) => api.get(`/shipments/${id}/tracking`)
 };

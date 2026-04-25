@@ -349,7 +349,7 @@ exports.updateShipmentLocation = asyncHandler(async (req, res, next) => {
 // Upload proof of delivery (Driver)
 exports.uploadProofOfDelivery = asyncHandler(async (req, res, next) => {
   const { id } = req.params;
-  const { deliveryImage, signatureImage, receivedBy } = req.body;
+  const { receivedBy } = req.body;
 
   const shipment = await Shipment.findById(id);
   if (!shipment) {
@@ -359,6 +359,9 @@ exports.uploadProofOfDelivery = asyncHandler(async (req, res, next) => {
   if (shipment.driver?.toString() !== req.user._id.toString()) {
     return next(new AppError('You are not authorized to update this shipment', 403));
   }
+
+  const deliveryImage = req.files?.deliveryImage?.[0]?.secure_url || req.files?.deliveryImage?.[0]?.path || req.body.deliveryImage;
+  const signatureImage = req.files?.signatureImage?.[0]?.secure_url || req.files?.signatureImage?.[0]?.path || req.body.signatureImage;
 
   shipment.proofOfDelivery = {
     deliveryImage,
