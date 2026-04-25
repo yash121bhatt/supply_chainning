@@ -10,7 +10,11 @@ const HeaderProfile = () => {
   const { user, logout, updateAvatar } = useAuthStore();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [preview, setPreview] = useState(user?.avatar ? `${import.meta.env.VITE_API_URL || '/api'}${user.avatar}` : null);
+  const getAvatarUrl = (avatar) => {
+    if (!avatar) return null;
+    return avatar;
+  };
+  const [preview, setPreview] = useState(user?.avatar ? getAvatarUrl(user.avatar) : null);
   const fileInputRef = useRef(null);
   const dropdownRef = useRef(null);
 
@@ -24,7 +28,7 @@ const HeaderProfile = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const avatarUrl = user?.avatar ? `${import.meta.env.VITE_API_URL || '/api'}${user.avatar}` : null;
+  const avatarUrl = user?.avatar ? getAvatarUrl(user.avatar) : null;
   const initial = user?.name?.charAt(0)?.toUpperCase() || '?';
 
   const handleFileChange = async (e) => {

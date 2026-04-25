@@ -201,7 +201,8 @@ exports.uploadAvatar = asyncHandler(async (req, res, next) => {
     return next(new AppError('User not found', 404));
   }
 
-  const avatarUrl = req.file.secure_url || `/uploads/avatars/${req.file.filename}`;
+  console.log('req.file:', req.file);
+  const avatarUrl = req.file.path || req.file.secure_url || `/uploads/avatars/${req.file.filename}`;
   user.avatar = avatarUrl;
   await user.save();
 

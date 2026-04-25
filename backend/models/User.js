@@ -154,6 +154,7 @@ userSchema.methods.getPublicProfile = function() {
   delete user.emailOtpAttempts;
   delete user.inviteToken;
   delete user.tokenExpiry;
+  
   return user;
 };
 

@@ -1,18 +1,24 @@
+require('dotenv').config();
+
+require('dotenv').config();
+
 const cloudinary = require('cloudinary');
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
-const isCloudinaryConfigured = process.env.CLOUDINARY_CLOUD_NAME && 
-                          process.env.CLOUDINARY_API_KEY && 
-                          process.env.CLOUDINARY_API_SECRET;
+const CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME;
+const API_KEY = process.env.CLOUDINARY_API_KEY;
+const API_SECRET = process.env.CLOUDINARY_API_SECRET;
+
+const isCloudinaryConfigured = CLOUD_NAME && API_KEY && API_SECRET;
 
 if (isCloudinaryConfigured) {
   cloudinary.v2.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET
+    cloud_name: CLOUD_NAME,
+    api_key: API_KEY,
+    api_secret: API_SECRET
   });
 }
 
@@ -56,6 +62,8 @@ const podStorage = isCloudinaryConfigured
         cb(null, uniqueName);
       }
     });
+
+console.log('Cloudinary config:', { isCloudinaryConfigured, CLOUD_NAME });
 
 const avatarUpload = multer({
   storage: avatarStorage,
